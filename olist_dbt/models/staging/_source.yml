@@ -1,0 +1,97 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Olist CSVs loaded as-is (all VARCHAR) by sql/00_ingest/01_load_raw.sql"
+    schema: raw
+    tables:
+      - name: orders
+        description: "One row per order"
+        columns:
+          - name: order_id
+            data_tests: [unique, not_null]
+          - name: customer_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'customers')
+                    field: customer_id
+
+      - name: customers
+        description: "One row per customer_id; customer_id is generated per order (use customer_unique_id for people)"
+        columns:
+          - name: customer_id
+            data_tests: [unique, not_null]
+          - name: customer_unique_id
+            data_tests: [not_null]
+
+      - name: order_items
+        description: "One row per item in an order"
+        data_tests:
+          - unique:
+              arguments:
+                column_name: "order_id || '-' || order_item_id"
+        columns:
+          - name: order_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'orders')
+                    field: order_id
+          - name: product_id
+            data_tests:
+              - relationships:
+                  arguments:
+                    to: source('raw', 'products')
+                    field: product_id
+          - name: seller_id
+            data_tests:
+              - relationships:
+                  arguments:
+                    to: source('raw', 'sellers')
+                    field: seller_id
+
+      - name: order_payments
+        description: "One row per payment in an order"
+        data_tests:
+          - unique:
+              arguments:
+                column_name: "order_id || '-' || payment_sequential"
+        columns:
+          - name: order_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'orders')
+                    field: order_id
+
+      - name: order_reviews
+        description: "One row per (review_id, order_id); review_id alone is NOT unique"
+        data_tests:
+          - unique:
+              arguments:
+                column_name: "review_id || '-' || order_id"
+        columns:
+          - name: order_id
+            data_tests: [not_null]
+
+      - name: products
+        columns:
+          - name: product_id
+            data_tests: [unique, not_null]
+
+      - name: sellers
+        columns:
+          - name: seller_id
+            data_tests: [unique, not_null]
+
+      - name: product_category_translate
+        columns:
+          - name: product_category_name
+            data_tests: [unique, not_null]
+
+      - name: geolocation
+        description: "NOT one row per zip (52.6 rows/zip). Not modeled."

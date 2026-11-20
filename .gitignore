@@ -30,3 +30,7 @@ logics_technical.md
 PHASE_EXECUTION.md
 reports/data_quality_report.md
 reports/executive_summary.md
+
+# Tool files
+.codesight/
+olist_dbt/.user.yml
