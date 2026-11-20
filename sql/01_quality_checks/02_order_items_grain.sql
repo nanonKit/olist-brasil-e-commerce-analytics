@@ -37,10 +37,10 @@ WHERE max_seq <> n_items;
 
 -- Numeric sanity: price and freight_value
 SELECT
-    COUNT(*) FILTER (WHERE TRY_CAST(price AS DECIMAL(18,2)) IS NULL)          AS price_not_numeric,
+    COUNT(*) FILTER (WHERE TRY_CAST(price AS DECIMAL(18,2)) IS NULL)          AS price_not_numeric,     -- แปลงเป็นตัวเลขไม่ได้
     COUNT(*) FILTER (WHERE TRY_CAST(freight_value AS DECIMAL(18,2)) IS NULL)  AS freight_not_numeric,
-    COUNT(*) FILTER (WHERE CAST(price AS DECIMAL(18,2)) <= 0)                 AS price_le_0,
-    COUNT(*) FILTER (WHERE CAST(freight_value AS DECIMAL(18,2)) = 0)          AS freight_eq_0,
+    COUNT(*) FILTER (WHERE CAST(price AS DECIMAL(18,2)) <= 0)                 AS price_le_0,            -- ราคา 0 หรือติดลบ
+    COUNT(*) FILTER (WHERE CAST(freight_value AS DECIMAL(18,2)) = 0)          AS freight_eq_0,          -- ส่งฟรี
     MIN(CAST(price AS DECIMAL(18,2)))                                         AS min_price,
     MEDIAN(CAST(price AS DECIMAL(18,2)))                                      AS median_price,
     MAX(CAST(price AS DECIMAL(18,2)))                                         AS max_price
