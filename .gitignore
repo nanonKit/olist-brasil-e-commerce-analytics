@@ -34,3 +34,4 @@ reports/executive_summary.md
 # Tool files
 .codesight/
 olist_dbt/.user.yml
+exports/

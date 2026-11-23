@@ -3,15 +3,17 @@
 > **Business question:** What drives bad customer reviews on a Brazilian marketplace — and where should operations act first?
 > Secondary: where does revenue come from (categories, sellers, states), and do customers come back?
 
-**Scope:** ~99k orders, 9 tables, Sep 2016 – Oct 2018 (analysis window Jan 2017 – Aug 2018) · DuckDB + dbt star schema · Looker Studio *(in progress)*
+**Scope:** ~99k orders, 9 tables, Sep 2016 – Oct 2018 (analysis window Jan 2017 – Aug 2018) · DuckDB + dbt star schema · Data Studio (formerly Looker Studio)
 
-![dbt lineage](image.png)
+**▶ [Live dashboard](https://datastudio.google.com/s/vIDl5xbSNE0)**
+
+![Dashboard](reports/dashboard.png)
 
 ## TL;DR
 
 | # | Finding | Evidence |
 |---|---|---|
-| 1 | **Late delivery is the #1 driver of bad reviews** | Late orders score **2.27** vs **4.29** on time. Only **6.7%** of orders are late, but they produce **32.6%** of all 1–2★ reviews. The later, the worse: 1–3 days late → 3.29, 8–14 days → 1.67 |
+| 1 | **Late delivery is the #1 driver of bad reviews — and costs repeat business** | Late orders score **2.27** vs **4.29** on time. Only **6.7%** of orders are late, but they produce **32.6%** of all 1–2★ reviews. The later, the worse: 1–3 days late → 3.29, 8–14 days → 1.67. Months with late spikes (Nov 2017, Feb–Mar 2018) show the lowest scores (monthly corr −0.84). Customers whose **first order was late** come back **1.62%** vs **2.25%** |
 | 2 | **Lateness is a geography problem, not a few bad sellers** | 64% of GMV ships from São Paulo sellers. Median delivery: SP 7 days vs AM 26, AL 22, PA 21. Sellers with ≥15% late rate cause only **5.7%** of late orders |
 | 3 | **Growth came from volume, not basket size — and is flattening** | Jan–Aug 2018 vs 2017: orders **+135%**, GMV **+137%**, AOV flat at ~R$137. 2018 GMV plateaus at R$0.85–1.0M / month |
 | 4 | **Almost no repeat customers** | Repeat rate **2.24%** (distinct purchase days; 3.12% by orders — 30% of "second orders" are same-day split checkouts). Median 28 days to 2nd order |
@@ -40,6 +42,10 @@
 
 Full log: 15 decisions with evidence and impact (`sql/01_quality_checks/`).
 
+**dbt lineage** (raw → staging):
+
+![dbt lineage](image.png)
+
 ## Approach
 
 ```
@@ -54,7 +60,8 @@ CSV (9) ──► DuckDB raw (all VARCHAR) ──► quality checks (SQL, read-o
 | Transform | dbt-duckdb · `olist_dbt/` | 8 staging views → 2 facts + 4 dimensions (tables) |
 | Tests | dbt | 92 tests: unique, not_null, relationships, accepted_values + revenue / order-count reconciliation |
 | Analysis | SQL · `sql/02_analysis` | 6 question files |
-| Dashboard | Looker Studio | *in progress* |
+| Export | SQL · `sql/03_export` | 2 flat, dashboard-ready CSVs (orders, order items) |
+| Dashboard | Data Studio | 1 page: KPIs, delay → review, delivery by state, monthly trend — [live link](https://datastudio.google.com/s/vIDl5xbSNE0) |
 
 **Data model** (details: [`docs/data_model.md`](docs/data_model.md)):
 
@@ -71,7 +78,7 @@ CSV (9) ──► DuckDB raw (all VARCHAR) ──► quality checks (SQL, read-o
 - Median used for delivery time (right-skewed, max 210 days).
 
 ## Limitations
-- Late delivery ↔ review is an **association**, not proven causation; only reviewed orders (99.2%) are analysed.
+- Late delivery ↔ review / repeat is an **association**, not proven causation; only reviewed orders (99.2%) are analysed. Repeat comparison is right-censored (late-window customers had less time to return).
 - "Late" is measured against Olist's estimate, which is padded (median estimate 24 days vs 10 actual).
 - Payment differences attributed to installment interest is an assumption.
 - Anonymised public data from one marketplace, 2016–2018.
@@ -88,6 +95,7 @@ CSV (9) ──► DuckDB raw (all VARCHAR) ──► quality checks (SQL, read-o
    uv run dbt docs generate && uv run dbt docs serve
    ```
 4. Run the analysis files in `sql/02_analysis/` against `olist.duckdb`.
+5. Run `sql/03_export/01_export_looker.sql` and upload the two CSVs to Data Studio (CSV File Upload connector).
 
 > DuckDB is pinned to 2.0.0 to match the DBeaver driver. Close other connections to `olist.duckdb` before running dbt (single writer).
 
@@ -98,13 +106,15 @@ CSV (9) ──► DuckDB raw (all VARCHAR) ──► quality checks (SQL, read-o
 ├── sql/
 │   ├── 00_ingest/            # load raw
 │   ├── 01_quality_checks/    # 7 read-only checks
-│   └── 02_analysis/          # 6 business questions
+│   ├── 02_analysis/          # 6 business questions
+│   └── 03_export/            # dashboard CSV export
 ├── olist_dbt/
 │   ├── models/staging/       # 8 stg_ views + sources + tests
 │   ├── models/intermediate/  # order-grain aggregates (ephemeral)
 │   ├── models/marts/         # fct_ / dim_ tables + tests
 │   └── tests/                # reconciliation tests
 ├── docs/data_model.md        # star schema, grain, metric definitions
+├── reports/dashboard.png     # dashboard screenshot
 └── pyproject.toml            # dbt-duckdb, duckdb 2.0.0
 ```
 
